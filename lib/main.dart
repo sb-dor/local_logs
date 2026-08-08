@@ -1,122 +1,94 @@
+import 'dart:async';
+import 'package:control/control.dart';
+import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:l/l.dart';
+import 'package:local_logs/app.dart';
+import 'package:local_logs/core/controller_observer/controller_observer.dart';
+import 'package:local_logs/core/database/database.dart';
+import 'package:local_logs/dependencies.dart';
+import 'package:rxdart/rxdart.dart';
 
-void main() {
-  runApp(const MyApp());
-}
+void main() async => runZonedGuarded(
+  () async {
+    final binding = WidgetsFlutterBinding.ensureInitialized()..deferFirstFrame();
+    await _catchExceptions();
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+    final dependencies = Dependencies();
+    final initialization = await _initializeDependencies();
+    for (final step in initialization.values) {
+      await step.call(dependencies);
+    }
 
-  // This widget is the root of your application.
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
-    );
-  }
-}
+    binding.allowFirstFrame();
+    runApp(App(dependencies: dependencies));
+  },
+  (error, stackTrace) {
+    // async errors will come here
+    l.e(error, stackTrace);
+  },
+);
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+typedef DependenciesFunctionInitializer = Future<void> Function(Dependencies dependencies);
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
+Future<Map<String, DependenciesFunctionInitializer>> _initializeDependencies() async {
+  return {
+    'init controller observer': (dependencies) async => Controller.observer = ControllerObserver(),
     //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: .center,
-          children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+    'app_database': (dependencies) async =>
+        dependencies.appDatabase = AppDatabase.defaults(name: 'local_logs'),
+    //
+    if (!kReleaseMode)
+      'clear local logs table': (dependencies) async {
+        await dependencies.appDatabase.delete(dependencies.appDatabase.logsTbl).go();
+        await dependencies.appDatabase.customStatement(
+          "DELETE FROM sqlite_sequence WHERE name='logs'",
+        );
+      },
+    //
+    if (!kReleaseMode)
+      'listen to local logs': (dependencies) async {
+        l.bufferTime(Duration(seconds: 1)).where((logs) => logs.isNotEmpty).listen((logs) async {
+          await dependencies.appDatabase.batch(
+            (batch) => batch.insertAll(
+              dependencies.appDatabase.logsTbl,
+              logs.map(
+                (log) => LogsTblCompanion(
+                  level: Value(log.level.level),
+                  message: Value(log.message.toString()),
+                  time: Value<int>(log.timestamp.millisecondsSinceEpoch ~/ 1000),
+                  stack: Value<String?>(switch (log) {
+                    LogMessageError l => l.stackTrace.toString(),
+                    _ => null,
+                  }),
+                ),
+              ),
             ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ),
-    );
+          );
+        }, cancelOnError: false);
+      },
+    //
+  };
+}
+
+/// catches Flutter error
+Future<void> _catchExceptions() async {
+  try {
+    PlatformDispatcher.instance.onError = (error, stackTrace) {
+      l.e(error, stackTrace, {'hint': 'ROOT ERROR\r\n${Error.safeToString(error)}'});
+      return true;
+    };
+
+    final sourceFlutterError = FlutterError.onError;
+    FlutterError.onError = (final details) {
+      l.e(details.exception, details.stack ?? StackTrace.current, {
+        'hint': 'FLUTTER ERROR\r\n$details',
+      });
+      // FlutterError.presentError(details);
+      sourceFlutterError?.call(details);
+    };
+  } on Object catch (error, stackTrace) {
+    l.e(error, stackTrace);
   }
 }
