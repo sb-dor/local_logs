@@ -46,7 +46,7 @@ class _LogsScreenState extends State<LogsScreen> {
                 pinned: MediaQuery.of(context).size.height > 600,
                 actions: [
                   IconButton(
-                    // where does the 'throw Exception()' goes to ?
+                    // where does the 'throw Exception()' go to ?
                     // if function is 'async' it goes to runZoneGuiared
                     // if function is 'sync' it goes to flutterError
 

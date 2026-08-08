@@ -21,20 +21,6 @@ class App extends StatefulWidget {
 
 /// State for widget App.
 class _AppState extends State<App> {
-  /* #region Lifecycle */
-  @override
-  void initState() {
-    super.initState();
-    // Initial state initialization
-  }
-
-  @override
-  void dispose() {
-    // Permanent removal of a tree stent
-    super.dispose();
-  }
-  /* #endregion */
-
   @override
   Widget build(BuildContext context) => DependenciesScope(
     dependencies: widget.dependencies,
