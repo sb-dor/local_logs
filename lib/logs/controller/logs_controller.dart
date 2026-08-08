@@ -53,10 +53,11 @@ class LogsController extends StateController<LogsControllerState> with Sequentia
 
   final ILogsRepository _iLogsRepository;
 
-  Future<void> load() => handle(() async {
-    setState(LogsControllerState.processing());
+  /// Loads the logs, optionally filtered by [search].
+  Future<void> load({String? search}) => handle(() async {
+    setState(const LogsControllerState.processing());
 
-    final logs = await _iLogsRepository.logs();
+    final logs = await _iLogsRepository.logs(search: search);
 
     setState(LogsControllerState.succeeded(logs: logs));
   }, error: (error, stackTrace) async => setState(LogsControllerState.failed(error: error)));

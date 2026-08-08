@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:control/control.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -22,8 +24,38 @@ class LogsScreen extends StatefulWidget {
 
 /// State for widget LogsScreen.
 class _LogsScreenState extends State<LogsScreen> {
+  /// How long to wait after the last keystroke before querying the database.
+  static const Duration _searchDebounce = Duration(milliseconds: 350);
+
   late final _logsController = LogsScope.of(context).logsController;
   late final _searchController = TextEditingController();
+
+  Timer? _searchDebounceTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchDebounceTimer?.cancel();
+    _searchController
+      ..removeListener(_onSearchChanged)
+      ..dispose();
+    super.dispose();
+  }
+
+  /// Restarts the debounce on every keystroke, so the database is queried
+  /// once the user stops typing instead of on each character.
+  void _onSearchChanged() {
+    _searchDebounceTimer?.cancel();
+    _searchDebounceTimer = Timer(
+      _searchDebounce,
+      () => _logsController.load(search: _searchController.text),
+    );
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -32,7 +64,7 @@ class _LogsScreenState extends State<LogsScreen> {
         padding: const .only(bottom: 8),
         child: RefreshIndicator.adaptive(
           onRefresh: () async {
-            _logsController.load();
+            _logsController.load(search: _searchController.text);
           },
           child: CustomScrollView(
             slivers: <Widget>[
