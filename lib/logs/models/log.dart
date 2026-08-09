@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:l/l.dart';
+import 'package:logger/logger.dart';
 
 @immutable
 class Log {
@@ -13,14 +13,14 @@ class Log {
 
   final int id;
   final int time;
-  final LogLevel logLevel;
+  final Level logLevel;
   final String message;
   final String? stack;
 
   Log copyWith({
     int? id,
     int? time,
-    LogLevel? logLevel,
+    Level? logLevel,
     String? message,
     ValueGetter<String?>? stack,
   }) {

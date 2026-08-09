@@ -1,7 +1,7 @@
 import 'package:drift/drift.dart';
-import 'package:l/l.dart';
 import 'package:local_logs/core/database/database.dart';
 import 'package:local_logs/logs/models/log.dart';
+import 'package:local_logs/core/app_logger/logger_extensions.dart' as logger_ex;
 
 abstract interface class ILogsRepository {
   /// Returns the stored logs, newest first.
@@ -39,7 +39,7 @@ final class LogsRepositoryImpl implements ILogsRepository {
           (log) => Log(
             id: log.id,
             time: log.time,
-            logLevel: LogLevel.fromValue(log.level),
+            logLevel: logger_ex.LogLevelEx.fromValue(log.level),
             message: log.message,
             stack: log.stack,
           ),

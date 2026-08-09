@@ -3,11 +3,11 @@ import 'dart:async';
 import 'package:control/control.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:l/l.dart';
 import 'package:local_logs/core/date_utill.dart';
 import 'package:local_logs/logs/controller/logs_controller.dart';
 import 'package:local_logs/logs/models/log.dart';
 import 'package:local_logs/logs/widgets/logs_scope.dart';
+import 'package:logger/logger.dart';
 
 /// {@template logs_screen}
 /// LogsScreen widget.
@@ -172,20 +172,21 @@ class _LogTile extends StatelessWidget {
 class _LogIcon extends StatelessWidget {
   const _LogIcon(this.level);
 
-  final LogLevel level;
+  final Level level;
 
   @override
-  Widget build(BuildContext context) => level.when<Widget>(
-    debug: () => const Icon(Icons.bug_report, color: Colors.indigo),
-    info: () => const Icon(Icons.info, color: Colors.blue),
-    warning: () => const Icon(Icons.warning, color: Colors.orange),
-    error: () => const Icon(Icons.error, color: Colors.red),
-    shout: () => const Icon(Icons.campaign, color: Colors.red),
-    v: () => const Icon(Icons.looks_one, color: Colors.grey),
-    vv: () => const Icon(Icons.looks_two, color: Colors.grey),
-    vvv: () => const Icon(Icons.looks_3, color: Colors.grey),
-    vvvv: () => const Icon(Icons.looks_4, color: Colors.grey),
-    vvvvv: () => const Icon(Icons.looks_5, color: Colors.grey),
-    vvvvvv: () => const Icon(Icons.looks_6, color: Colors.grey),
-  );
+  Widget build(BuildContext context) => switch (level) {
+    // TODO: Handle this case.
+    Level.all => Icon(Icons.bug_report, color: Colors.indigo),
+    Level.verbose => Icon(Icons.bug_report, color: Colors.indigo),
+    Level.trace => Icon(Icons.bug_report, color: Colors.indigo),
+    Level.debug => Icon(Icons.bug_report, color: Colors.indigo),
+    Level.info => Icon(Icons.info, color: Colors.blue),
+    Level.warning => Icon(Icons.warning, color: Colors.orange),
+    Level.error => Icon(Icons.error, color: Colors.red),
+    Level.wtf => Icon(Icons.bug_report, color: Colors.indigo),
+    Level.fatal => Icon(Icons.error, color: Colors.red),
+    Level.nothing => SizedBox.shrink(),
+    Level.off => SizedBox.shrink(),
+  };
 }

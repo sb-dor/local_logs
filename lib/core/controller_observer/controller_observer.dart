@@ -1,30 +1,35 @@
 import 'package:control/control.dart';
-import 'package:l/l.dart';
+import 'package:local_logs/core/app_logger/app_logger.dart';
+import 'package:logger/logger.dart';
 
 /// Observer for [Controller], react to changes in any controller.
 final class ControllerObserver implements IControllerObserver {
-  const ControllerObserver();
+  const ControllerObserver(this._appLogger);
+
+  final AppLogger _appLogger;
 
   @override
   void onCreate(Controller controller) {
-    l.v6('Controller | ${controller.name}.new');
+    _appLogger.log(Level.info, 'Controller | ${controller.name}.new');
   }
 
   @override
   void onDispose(Controller controller) {
-    l.v5('Controller | ${controller.name}.dispose');
+    _appLogger.log(Level.info, 'Controller | ${controller.name}.dispose');
   }
 
   @override
   void onHandler(HandlerContext context) {
     final stopwatch = Stopwatch()..start();
-    l.d('Controller | ${context.controller.name}.${context.name}', context.meta);
+    _appLogger.log(
+      Level.info,
+      'Controller | ${context.controller.name}.${context.name} | ${context.meta}',
+    );
     context.done.whenComplete(() {
       stopwatch.stop();
-      l.d(
-        'Controller | ${context.controller.name}.${context.name} | '
-        'duration: ${stopwatch.elapsed}',
-        context.meta,
+      _appLogger.log(
+        Level.info,
+        'Controller | ${context.controller.name}.${context.name} | duration: ${stopwatch.elapsed} | ${context.meta}',
       );
     });
   }
@@ -34,12 +39,12 @@ final class ControllerObserver implements IControllerObserver {
     final context = Controller.context;
     if (context == null) {
       // State change occurred outside of the handler
-      l.d('StateController | ${controller.name} | $prevState -> $nextState');
+      _appLogger.log(Level.info, 'StateController | ${controller.name} | $prevState -> $nextState');
     } else {
       // State change occurred inside the handler
-      l.d(
-        'StateController | ${controller.name}.${context.name} | $prevState -> $nextState',
-        context.meta,
+      _appLogger.log(
+        Level.info,
+        'StateController | ${controller.name}.${context.name} | $prevState -> $nextState | ${context.meta}',
       );
     }
   }
@@ -51,12 +56,17 @@ final class ControllerObserver implements IControllerObserver {
     final context = Controller.context;
     if (context == null) {
       // Error occurred outside of the handler
-      l.w('Controller | ${controller.name} | $error', stackTrace);
+      _appLogger.log(Level.error, 'Controller | ${controller.name}', error, stackTrace);
     } else {
       // Error occurred inside the handler
-      l.w('Controller | ${controller.name}.${context.name} | $error', stackTrace, context.meta);
+      _appLogger.log(
+        Level.error,
+        'Controller | ${controller.name}.${context.name}',
+        error,
+        stackTrace,
+      );
     }
-    l.e(error, stackTrace);
+    _appLogger.log(Level.info, "Controller observer error", error, stackTrace);
   }
 }
 
